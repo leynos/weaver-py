@@ -70,7 +70,16 @@ functionality will be implemented yet.*
     endpoint on the daemon. A successful run of this command validates the
     entire communication pipeline.
 
-## Phase 1: Read-Only Verbs (Observe & Orient)
+## Phase 1: Core MVP & Safety Harness Foundation
+
+*Goal: Establish the core client/daemon architecture, basic LSP integration, and the foundational security and verification mechanisms. The MVP must be safe for write operations from day one.*
+
+- [x] **Implement the `weaver-cli` and `weaverd` crates using `ortho-config` for commandline interface, with robust daemonisation and process management.**
+  - Introduced a Rust workspace with dedicated crates for the CLI and daemon.
+  - Added PID-file safety guards, Tokio-based runtime orchestration, and JSON-based status reporting.
+  - Exercised the lifecycle end-to-end through unit tests and `rstest-bdd` behavioural coverage.
+
+## Phase 2: Read-Only Verbs (Observe & Orient)
 
 *This phase brings the core read-only code intelligence to life. The goal is to
 enable the agent to inspect and understand a codebase without modifying it.
@@ -128,7 +137,7 @@ This phase focuses on wrapping Serena's tool capabilities.*
     this repository and validates the resulting JSONL output against expected
     snapshots.
 
-## Phase 2: Simulation & Analysis Verbs (Decide)
+## Phase 3: Simulation & Analysis Verbs (Decide)
 
 *This phase implements the "semantic firewall" — the ability to simulate
 changes and analyse their impact. This is the most complex part of the
