@@ -1,12 +1,43 @@
 use std::cell::RefCell;
+use std::env;
 use std::fs;
 use std::path::PathBuf;
+use std::process::Command;
+use std::sync::{Once, OnceLock};
 
 use rstest::fixture;
 use rstest_bdd_macros::{given, scenario, then, when};
 use serde_json::Value;
 use serial_test::serial;
 use tempfile::TempDir;
+
+/// Build (once) and memoise the path to the `weaverd` binary so behavioural tests can
+/// spawn the daemon without assuming Cargo prepared the artefact.
+fn ensure_weaverd_binary() -> PathBuf {
+    static BINARY: OnceLock<PathBuf> = OnceLock::new();
+    BINARY
+        .get_or_init(|| {
+            build_weaverd_binary();
+            assert_cmd::cargo::cargo_bin("weaverd")
+        })
+        .clone()
+}
+
+/// Invoke `cargo build` lazily the first time the daemon binary is requested.
+fn build_weaverd_binary() {
+    static BUILD: Once = Once::new();
+    BUILD.call_once(|| {
+        let cargo = env::var("CARGO").unwrap_or_else(|_| "cargo".to_string());
+        let status = Command::new(&cargo)
+            .args(["build", "--package", "weaverd", "--bin", "weaverd"])
+            .status()
+            .expect("failed to run cargo build for weaverd");
+        assert!(
+            status.success(),
+            "cargo failed to build the weaverd binary (status: {status})"
+        );
+    });
+}
 
 #[derive(Clone)]
 struct CommandResult {
@@ -28,7 +59,7 @@ impl Harness {
         let tempdir = TempDir::new().expect("tempdir");
         let socket_path = tempdir.path().join("daemon.sock");
         let pid_file = tempdir.path().join("daemon.pid");
-        let daemon_binary = assert_cmd::cargo::cargo_bin("weaverd");
+        let daemon_binary = ensure_weaverd_binary();
         Self {
             tempdir,
             socket_path,

@@ -288,13 +288,31 @@ fn read_pid_file(path: &Path) -> Result<Option<u32>, CliError> {
 }
 
 fn is_pid_alive(pid: u32) -> bool {
-    match kill(Pid::from_raw(pid as i32), None) {
+    let raw = pid as i32;
+    let pid = Pid::from_raw(raw);
+    let alive = match kill(pid, None) {
         Ok(()) => true,
         Err(Errno::EPERM) => true,
         Err(Errno::ESRCH) => false,
         Err(_) => false,
+    };
+    if !alive {
+        return false;
     }
+    #[cfg(target_os = "linux")]
+    {
+        // A stopped daemon briefly becomes a zombie before init reaps it.
+        // Treat that transient state as "not running" for status polling.
+        let stat_path = Path::new("/proc").join(raw.to_string()).join("stat");
+        if let Ok(stat) = fs::read_to_string(stat_path) {
+            if stat.split_whitespace().nth(2) == Some("Z") {
+                return false;
+            }
+        }
+    }
+    true
 }
+
 
 #[cfg(test)]
 mod tests {
