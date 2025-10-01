@@ -383,7 +383,13 @@ patched version is available.
 - The Rust workspace now houses dedicated `weaver-cli` and `weaverd` crates.
   The CLI layers `ortho-config` derived option structs over a `SystemSpawner`
   abstraction, preparing PID files and Unix-domain sockets before launching the
-  daemon and pruning them on shutdown.
+  daemon and pruning them on shutdown. The spawner now calls `setsid` prior to
+  exec so the daemon detaches from the invoking terminal cleanly, and readiness
+  polling uses an exponential backoff helper to avoid busy loops while waiting
+  for start-up or shutdown events.
+- A shared `weaver-runtime` crate centralises runtime directory resolution and
+  the default socket/PID naming so the CLI and daemon derive their filesystem
+  locations from a single source of truth.
 - `weaverd` runs on a single-threaded Tokio runtime, coordinating graceful
   termination through `Notify`. Status replies are serialised with
   `serde_json`, while PID and socket artefacts are protected by scoped RAII

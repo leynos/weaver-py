@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "crates/weaver-cli",
+    "crates/weaver-cli", "crates/weaver-runtime",
     "crates/weaverd",
 ]
 resolver = "2"
@@ -17,9 +17,12 @@ thiserror = "1.0"
 nix = { version = "0.28", default-features = false, features = ["signal"] }
 tokio = { version = "1.39", features = ["rt", "macros", "signal", "net", "time", "io-util", "sync"] }
 clap = { version = "4.5", features = ["derive"] }
+libc = "0.2"
 rstest = "0.26"
 rstest-bdd = "0.1.0-alpha4"
 rstest-bdd-macros = "0.1.0-alpha4"
 assert_cmd = "2.0"
 tempfile = "3.10"
 serial_test = "3.1"
+weaver-runtime = { path = "crates/weaver-runtime" }
+tracing = "0.1"

@@ -1,13 +1,11 @@
-use std::env;
 use std::path::PathBuf;
 use std::time::Duration;
 
 use clap::Parser;
 use ortho_config::OrthoConfig;
 use serde::{Deserialize, Serialize};
+use weaver_runtime::{default_pid_file, default_socket_path};
 
-const DEFAULT_SOCKET_FILENAME: &str = "weaverd.sock";
-const DEFAULT_PID_FILENAME: &str = "weaverd.pid";
 const DEFAULT_SHUTDOWN_GRACE_SECS: u64 = 5;
 
 #[derive(Debug, Clone, Parser, Deserialize, Serialize, OrthoConfig)]
@@ -59,37 +57,36 @@ pub struct ResolvedDaemonConfig {
     pub shutdown_grace: Duration,
 }
 
-fn default_socket_path() -> PathBuf {
-    runtime_dir().join(DEFAULT_SOCKET_FILENAME)
-}
-
-fn default_pid_file() -> PathBuf {
-    runtime_dir().join(DEFAULT_PID_FILENAME)
-}
-
-fn runtime_dir() -> PathBuf {
-    env::var_os("XDG_RUNTIME_DIR")
-        .filter(|value| !value.is_empty())
-        .map(PathBuf::from)
-        .or_else(|| env::var_os("TMPDIR").map(PathBuf::from))
-        .unwrap_or_else(std::env::temp_dir)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use serial_test::serial;
+    use std::env;
+    use std::ffi::OsString;
     use tempfile::TempDir;
+
+    fn with_env(name: &str, value: Option<OsString>, f: impl FnOnce()) {
+        let original = env::var_os(name);
+        match value {
+            Some(v) => env::set_var(name, v),
+            None => env::remove_var(name),
+        }
+        f();
+        match original {
+            Some(v) => env::set_var(name, v),
+            None => env::remove_var(name),
+        }
+    }
 
     #[test]
     #[serial]
     fn defaults_use_runtime_dir() {
         let dir = TempDir::new().expect("tempdir");
-        env::set_var("XDG_RUNTIME_DIR", dir.path());
-        let args = DaemonArgs::default();
-        let config = args.resolve();
-        assert!(config.socket_path.starts_with(dir.path()));
-        assert!(config.pid_file.starts_with(dir.path()));
-        env::remove_var("XDG_RUNTIME_DIR");
+        with_env("XDG_RUNTIME_DIR", Some(dir.path().into()), || {
+            let args = DaemonArgs::default();
+            let config = args.resolve();
+            assert!(config.socket_path.starts_with(dir.path()));
+            assert!(config.pid_file.starts_with(dir.path()));
+        });
     }
 }

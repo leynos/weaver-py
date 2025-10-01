@@ -1,11 +1,13 @@
 use std::fs;
 use std::io::{self, Read, Write};
 use std::os::unix::net::UnixStream;
+use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
 
+use libc::setsid;
 use nix::errno::Errno;
 use nix::sys::signal::{kill, Signal};
 use nix::unistd::Pid;
@@ -67,8 +69,17 @@ impl DaemonSpawner for SystemSpawner {
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null());
+        unsafe {
+            command.pre_exec(|| {
+                if setsid() == -1 {
+                    Err(io::Error::last_os_error())
+                } else {
+                    Ok(())
+                }
+            });
+        }
         let child = command.spawn()?;
-        // We intentionally drop the child handle immediately so the process detaches.
+        // setsid places the child in its own session so we can drop the handle immediately.
         drop(child);
         Ok(())
     }
@@ -131,77 +142,65 @@ impl<S: DaemonSpawner> DaemonController<S> {
     }
 
     pub fn status(&self, options: &StatusOptions) -> Result<DaemonStatus, CliError> {
-        match read_pid_file(&options.paths.pid_file)? {
-            Some(pid) if is_pid_alive(pid) => match self.request_status(&options.paths) {
-                Ok(envelope) => Ok(DaemonStatus {
+        let socket_path = options.paths.socket_path.clone();
+        if let Some(pid) = read_pid_file(&options.paths.pid_file)? {
+            if is_pid_alive(pid) {
+                let details = self.request_status(&options.paths).ok();
+                return Ok(DaemonStatus {
                     running: true,
                     pid: Some(pid),
-                    socket_path: options.paths.socket_path.clone(),
-                    details: Some(envelope),
-                }),
-                Err(err) => match err {
-                    CliError::Io { .. } => Ok(DaemonStatus {
-                        running: true,
-                        pid: Some(pid),
-                        socket_path: options.paths.socket_path.clone(),
-                        details: None,
-                    }),
-                    other => Err(other),
-                },
-            },
-            Some(_) => {
-                self.remove_stale_artifacts(&options.paths)?;
-                Ok(DaemonStatus {
-                    running: false,
-                    pid: None,
-                    socket_path: options.paths.socket_path.clone(),
-                    details: None,
-                })
+                    socket_path: socket_path.clone(),
+                    details,
+                });
             }
-            None => Ok(DaemonStatus {
-                running: false,
-                pid: None,
-                socket_path: options.paths.socket_path.clone(),
-                details: None,
-            }),
+            self.remove_stale_artifacts(&options.paths)?;
         }
+        Ok(DaemonStatus {
+            running: false,
+            pid: None,
+            socket_path,
+            details: None,
+        })
     }
 
     fn wait_for_ready(&self, options: &StartOptions) -> Result<(), CliError> {
-        let deadline = Instant::now() + options.startup_timeout;
         let status_opts = StatusOptions {
             paths: options.paths.clone(),
         };
-        loop {
-            if Instant::now() >= deadline {
-                return Err(CliError::StartTimeout {
-                    timeout: options.startup_timeout,
-                });
-            }
-            if let Ok(status) = self.status(&status_opts) {
-                if status.running {
-                    return Ok(());
-                }
-            }
-            thread::sleep(Duration::from_millis(100));
-        }
+        self.wait_for(
+            options.startup_timeout,
+            |timeout| CliError::StartTimeout { timeout },
+            || Ok(self.status(&status_opts)?.running),
+        )
     }
 
     fn wait_for_shutdown(&self, options: &StopOptions) -> Result<(), CliError> {
-        let deadline = Instant::now() + options.shutdown_timeout;
         let status_opts = StatusOptions {
             paths: options.paths.clone(),
         };
+        self.wait_for(
+            options.shutdown_timeout,
+            |timeout| CliError::ShutdownTimeout { timeout },
+            || Ok(!self.status(&status_opts)?.running),
+        )
+    }
+
+    fn wait_for<F, G>(&self, timeout: Duration, on_timeout: G, mut check: F) -> Result<(), CliError>
+    where
+        F: FnMut() -> Result<bool, CliError>,
+        G: Fn(Duration) -> CliError,
+    {
+        let deadline = Instant::now() + timeout;
+        let mut delay = Duration::from_millis(100);
         loop {
+            if check()? {
+                return Ok(());
+            }
             if Instant::now() >= deadline {
-                return Err(CliError::ShutdownTimeout {
-                    timeout: options.shutdown_timeout,
-                });
+                return Err(on_timeout(timeout));
             }
-            match self.status(&status_opts) {
-                Ok(DaemonStatus { running: false, .. }) => return Ok(()),
-                Ok(_) | Err(_) => thread::sleep(Duration::from_millis(100)),
-            }
+            thread::sleep(delay);
+            delay = (delay * 2).min(Duration::from_millis(500));
         }
     }
 
@@ -228,42 +227,35 @@ impl<S: DaemonSpawner> DaemonController<S> {
     }
 
     fn request_status(&self, paths: &DaemonPaths) -> Result<StatusEnvelope, CliError> {
-        let mut stream = UnixStream::connect(&paths.socket_path)
-            .map_err(|err| CliError::io(paths.socket_path.clone(), err))?;
-        stream
-            .write_all(
-                b"STATUS
-",
-            )
-            .map_err(|err| CliError::io(paths.socket_path.clone(), err))?;
-        stream.shutdown(std::net::Shutdown::Write).ok();
-        let mut buf = String::new();
-        stream
-            .read_to_string(&mut buf)
-            .map_err(|err| CliError::io(paths.socket_path.clone(), err))?;
-        serde_json::from_str(&buf).map_err(|err| CliError::InvalidStatus(err.to_string()))
+        let response = self.send_message(paths, b"STATUS")?;
+        serde_json::from_str(&response).map_err(|err| CliError::InvalidStatus(err.to_string()))
     }
 
     fn send_shutdown(&self, paths: &DaemonPaths) -> Result<(), CliError> {
+        let response = self.send_message(paths, b"SHUTDOWN")?;
+        if response.trim().is_empty() {
+            return Ok(());
+        }
+        serde_json::from_str::<serde_json::Value>(&response)
+            .map(|_| ())
+            .map_err(|err| CliError::InvalidStatus(err.to_string()))
+    }
+
+    fn send_message(&self, paths: &DaemonPaths, msg: &[u8]) -> Result<String, CliError> {
         let mut stream = UnixStream::connect(&paths.socket_path)
             .map_err(|err| CliError::io(paths.socket_path.clone(), err))?;
         stream
-            .write_all(
-                b"SHUTDOWN
-",
-            )
+            .write_all(msg)
+            .map_err(|err| CliError::io(paths.socket_path.clone(), err))?;
+        stream
+            .write_all(b"\n")
             .map_err(|err| CliError::io(paths.socket_path.clone(), err))?;
         stream.shutdown(std::net::Shutdown::Write).ok();
         let mut buf = String::new();
         stream
             .read_to_string(&mut buf)
             .map_err(|err| CliError::io(paths.socket_path.clone(), err))?;
-        if buf.trim().is_empty() {
-            return Ok(());
-        }
-        serde_json::from_str::<serde_json::Value>(&buf)
-            .map(|_| ())
-            .map_err(|err| CliError::InvalidStatus(err.to_string()))
+        Ok(buf)
     }
 
     fn signal_terminate(&self, pid: u32) -> Result<(), CliError> {
@@ -312,7 +304,6 @@ fn is_pid_alive(pid: u32) -> bool {
     }
     true
 }
-
 
 #[cfg(test)]
 mod tests {

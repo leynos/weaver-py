@@ -9,6 +9,7 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{UnixListener, UnixStream};
 use tokio::signal::unix::{signal, SignalKind};
 use tokio::sync::Notify;
+use tracing::warn;
 
 use crate::config::ResolvedDaemonConfig;
 use crate::error::DaemonError;
@@ -93,6 +94,7 @@ async fn handle_client(stream: UnixStream, state: Arc<DaemonState>) -> io::Resul
             Ok(())
         }
         other => {
+            warn!("received unknown command from client: {other}");
             let payload = json!({
                 "status": "error",
                 "message": format!("unknown command {other}"),

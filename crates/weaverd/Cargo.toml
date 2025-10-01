@@ -17,9 +17,11 @@ ortho_config = { workspace = true }
 ortho_config_macros = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+weaver-runtime = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true }
 nix = { workspace = true }
+tracing = { workspace = true }
 
 [dev-dependencies]
 rstest = { workspace = true }

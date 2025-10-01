@@ -5,11 +5,10 @@ use std::time::Duration;
 use clap::Parser;
 use ortho_config::OrthoConfig;
 use serde::{Deserialize, Serialize};
+use weaver_runtime::{default_pid_file, default_socket_path};
 
 use crate::error::CliError;
 
-const DEFAULT_SOCKET_FILENAME: &str = "weaverd.sock";
-const DEFAULT_PID_FILENAME: &str = "weaverd.pid";
 const DEFAULT_STARTUP_SECS: u64 = 10;
 const DEFAULT_SHUTDOWN_SECS: u64 = 10;
 
@@ -187,22 +186,6 @@ fn resolve_paths(socket_path: Option<PathBuf>, pid_file: Option<PathBuf>) -> Dae
     DaemonPaths::new(socket_path, pid_file)
 }
 
-fn default_socket_path() -> PathBuf {
-    runtime_dir().join(DEFAULT_SOCKET_FILENAME)
-}
-
-fn default_pid_file() -> PathBuf {
-    runtime_dir().join(DEFAULT_PID_FILENAME)
-}
-
-fn runtime_dir() -> PathBuf {
-    env::var_os("XDG_RUNTIME_DIR")
-        .filter(|value| !value.is_empty())
-        .map(PathBuf::from)
-        .or_else(|| env::var_os("TMPDIR").map(PathBuf::from))
-        .unwrap_or_else(std::env::temp_dir)
-}
-
 fn default_daemon_binary() -> PathBuf {
     const BIN_NAME: &str = "weaverd";
     let current = env::current_exe().ok();
@@ -253,9 +236,9 @@ mod tests {
             "XDG_RUNTIME_DIR",
             Some(expected.clone().into_os_string()),
             || {
-                let socket = default_socket_path();
+                let socket = weaver_runtime::default_socket_path();
                 assert!(socket.starts_with(&expected));
-                let pid = default_pid_file();
+                let pid = weaver_runtime::default_pid_file();
                 assert!(pid.starts_with(&expected));
             },
         );
