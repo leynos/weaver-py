@@ -202,3 +202,22 @@ async def test_list_diagnostics_case_insensitive(
     with pytest.raises(StopAsyncIteration):
         await builtins.anext(results)
     assert diag.message == "boom"
+
+
+def test_normalize_diagnostic_data_tolerates_missing_severity() -> None:
+    """A preconstructed diagnostic without a severity is normalised, not rejected."""
+    loc = Location(
+        file="Foo.Py",
+        range=Range(start=Position(1, 0), end=Position(1, 1)),
+    )
+    diag = Diagnostic(
+        location=loc,
+        severity=typ.cast("typ.Any", None),
+        code=None,
+        message="boom",
+    )
+
+    severity, file = server._normalize_diagnostic_data(diag)
+
+    assert severity is None
+    assert file is not None

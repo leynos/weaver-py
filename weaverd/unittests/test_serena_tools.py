@@ -31,7 +31,7 @@ def test_resolve_string_tool_name_unknown() -> None:
 
 def test_resolve_tool_name_type_error() -> None:
     with pytest.raises(TypeError):
-        _resolve_tool_name(123)  # type: ignore[arg-type]
+        _resolve_tool_name(123)  # ty: ignore[invalid-argument-type] -- deliberately wrong type
 
 
 def test_resolve_tool_name_from_enum() -> None:

@@ -91,7 +91,8 @@ async def _collect_symbols_from_results(
             await anext(results)
     except StopAsyncIteration:
         if len(symbols) != expected_count:
-            pytest.fail(f"Expected {expected_count} symbols, got {len(symbols)}")
+            message = f"Expected {expected_count} symbols, got {len(symbols)}"
+            raise AssertionError(message) from None
         raise
     return symbols
 
