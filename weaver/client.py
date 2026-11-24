@@ -7,7 +7,7 @@ import logging
 import os
 import sys
 import typing as typ
-from pathlib import Path  # noqa: TC003
+from pathlib import Path  # ruff: ignore[typing-only-standard-library-import]
 
 import anyio
 import msgspec as ms
@@ -169,7 +169,7 @@ async def rpc_call(
 ) -> None:
     """Send an RPC request and stream the response to ``stdout``."""
     path = _resolve_socket_path(socket_path)
-    stdout = typ.cast(typ.TextIO, sys.stdout if stdout is None else stdout)  # noqa: TC006
+    stdout = typ.cast(typ.TextIO, sys.stdout if stdout is None else stdout)  # ruff: ignore[runtime-cast-value]
     try:
         reader, writer = await _establish_rpc_connection(path)
     except DaemonStartError as exc:

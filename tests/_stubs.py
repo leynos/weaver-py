@@ -20,7 +20,7 @@ def make_fake_module(name: str, **attrs: object) -> _types.ModuleType:
 
 
 @contextlib.contextmanager
-def injected_modules(**mods: _types.ModuleType) -> typ.Iterator[None]:
+def injected_modules(**mods: _types.ModuleType) -> typ.Generator[None, None, None]:
     """Temporarily inject ``mods`` into ``sys.modules`` for test isolation."""
 
     prev: dict[str, _types.ModuleType | None] = {}

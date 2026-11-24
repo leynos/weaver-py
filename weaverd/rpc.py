@@ -18,6 +18,7 @@ else:  # pragma: no cover - runtime compatibility
 HandlerSync = typ.Callable[..., object]
 HandlerAsync = typ.Callable[..., typ.Awaitable[object]]
 Handler = HandlerSync | HandlerAsync
+_HandlerT = typ.TypeVar("_HandlerT", bound=Handler)
 
 Predicate = typ.Callable[[object], bool]
 ResultProcessor = typ.Callable[[object], typ.AsyncIterator[bytes]]
@@ -36,8 +37,8 @@ class RPCDispatcher:
     def __init__(self) -> None:
         self._handlers: dict[str, Handler] = {}
 
-    def register(self, name: str) -> typ.Callable[[Handler], Handler]:
-        def decorator(func: Handler) -> Handler:
+    def register(self, name: str) -> typ.Callable[[_HandlerT], _HandlerT]:
+        def decorator(func: _HandlerT) -> _HandlerT:
             self._handlers[name] = func
             return func
 
@@ -47,11 +48,12 @@ class RPCDispatcher:
     def _encode_error(message: str) -> bytes:
         return msjson.encode(SchemaError(message=message))
 
-    def _decode_request(self, data: bytes) -> tuple[RPCRequest | None, bytes | None]:
+    def _decode_request(self, data: bytes) -> RPCRequest | bytes:
+        """Return the decoded request, or the encoded error if decoding fails."""
         try:
-            return msjson.decode(data, type=RPCRequest), None
+            return msjson.decode(data, type=RPCRequest)
         except ms.DecodeError as exc:
-            return None, self._encode_error(f"invalid request: {exc}")
+            return self._encode_error(f"invalid request: {exc}")
 
     async def _execute_handler(
         self, handler: Handler | None, request: RPCRequest
@@ -61,8 +63,8 @@ class RPCDispatcher:
         try:
             result = handler(**(request.params or {}))
             if inspect.isawaitable(result):
-                result = await typ.cast(typ.Awaitable[object], result)  # noqa: TC006
-        except Exception as exc:  # noqa: BLE001 - ensure structured errors
+                result = await typ.cast(typ.Awaitable[object], result)  # ruff: ignore[runtime-cast-value]
+        except Exception as exc:  # ruff: ignore[blind-except] - ensure structured errors
             return None, self._encode_error(str(exc))
         return result, None
 
@@ -77,7 +79,7 @@ class RPCDispatcher:
         try:
             async for item in result:
                 yield msjson.encode(item)
-        except Exception as exc:  # noqa: BLE001 - ensure structured errors
+        except Exception as exc:  # ruff: ignore[blind-except] - ensure structured errors
             yield self._encode_error(str(exc))
 
     async def _process_sync_iterable_result(
@@ -86,7 +88,7 @@ class RPCDispatcher:
         try:
             for item in result:
                 yield msjson.encode(item)
-        except Exception as exc:  # noqa: BLE001 - ensure structured errors
+        except Exception as exc:  # ruff: ignore[blind-except] - ensure structured errors
             yield self._encode_error(str(exc))
 
     async def _process_single_result(self, result: object) -> typ.AsyncIterator[bytes]:
@@ -134,10 +136,11 @@ class RPCDispatcher:
             yield chunk
 
     async def handle(self, data: bytes) -> typ.AsyncIterator[bytes]:
-        request, err = self._decode_request(data)
-        if err is not None:
-            yield err
+        decoded = self._decode_request(data)
+        if isinstance(decoded, bytes):
+            yield decoded
             return
+        request = decoded
 
         result, err = await self._execute_handler(
             self._handlers.get(request.method), request

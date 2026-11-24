@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import os  # noqa: TC003 -- required at runtime for type evaluation
+import os  # ruff: ignore[typing-only-standard-library-import] -- required at runtime for type evaluation
 
 import anyio
 

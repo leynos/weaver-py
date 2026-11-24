@@ -4,7 +4,7 @@ import typing as typ
 
 import msgspec as ms
 
-from .primitives import Range  # noqa: TC001
+from .primitives import Range  # ruff: ignore[typing-only-first-party-import]
 
 
 class CodeEdit(ms.Struct, frozen=True):
