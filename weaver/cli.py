@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import typing as typ
-from pathlib import Path  # noqa: TC003 -- Typer evaluates this at runtime
+from pathlib import Path  # ruff: ignore[typing-only-standard-library-import] -- Typer evaluates this at runtime
 
 import anyio
 import typer
@@ -67,7 +67,7 @@ def list_diagnostics(
         "-s",
         help="Filter diagnostics by severity",
     ),
-    files: list[Path] = typer.Argument(None, metavar="[FILES...]"),  # noqa: B008
+    files: list[Path] = typer.Argument(None, metavar="[FILES...]"),  # ruff: ignore[function-call-in-default-argument]
 ) -> None:
     """Stream diagnostics for the workspace."""
     params: JSONObject = {}
@@ -86,7 +86,7 @@ def onboard_project() -> None:
 
 @app.command("get-definition")
 def get_definition(
-    file: Path = typer.Argument(  # noqa: B008
+    file: Path = typer.Argument(  # ruff: ignore[function-call-in-default-argument]
         ...,
         exists=True,
         file_okay=True,
@@ -115,7 +115,7 @@ def get_definition(
 
 @app.command("list-references")
 def list_references(
-    file: Path = typer.Argument(  # noqa: B008
+    file: Path = typer.Argument(  # ruff: ignore[function-call-in-default-argument]
         ...,
         exists=True,
         file_okay=True,
@@ -125,7 +125,7 @@ def list_references(
     ),
     line: int = typer.Argument(..., min=0),
     char: int = typer.Argument(..., min=0),
-    include_definition: bool = typer.Option(  # noqa: FBT001
+    include_definition: bool = typer.Option(  # ruff: ignore[boolean-type-hint-positional-argument]
         default=False, help="Include symbol definition in results"
     ),
 ) -> None:

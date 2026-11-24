@@ -61,8 +61,8 @@ class RPCDispatcher:
         try:
             result = handler(**(request.params or {}))
             if inspect.isawaitable(result):
-                result = await typ.cast(typ.Awaitable[object], result)  # noqa: TC006
-        except Exception as exc:  # noqa: BLE001 - ensure structured errors
+                result = await typ.cast(typ.Awaitable[object], result)  # ruff: ignore[runtime-cast-value]
+        except Exception as exc:  # ruff: ignore[blind-except] - ensure structured errors
             return None, self._encode_error(str(exc))
         return result, None
 
@@ -77,7 +77,7 @@ class RPCDispatcher:
         try:
             async for item in result:
                 yield msjson.encode(item)
-        except Exception as exc:  # noqa: BLE001 - ensure structured errors
+        except Exception as exc:  # ruff: ignore[blind-except] - ensure structured errors
             yield self._encode_error(str(exc))
 
     async def _process_sync_iterable_result(
@@ -86,7 +86,7 @@ class RPCDispatcher:
         try:
             for item in result:
                 yield msjson.encode(item)
-        except Exception as exc:  # noqa: BLE001 - ensure structured errors
+        except Exception as exc:  # ruff: ignore[blind-except] - ensure structured errors
             yield self._encode_error(str(exc))
 
     async def _process_single_result(self, result: object) -> typ.AsyncIterator[bytes]:

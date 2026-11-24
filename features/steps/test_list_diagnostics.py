@@ -51,7 +51,7 @@ def runtime_dir(runtime_dir: Context, monkeypatch: pytest.MonkeyPatch) -> Contex
             files: list[str] | None = None,
         ) -> typ.Iterator[Diagnostic]:  # pragma: no cover - stub
             tool = typ.cast(
-                typ.Any,  # noqa: TC006
+                typ.Any,  # ruff: ignore[runtime-cast-value]
                 server.create_serena_tool(SerenaTool.LIST_DIAGNOSTICS),
             )
             yield from (

@@ -62,7 +62,7 @@ def spawn_daemon(
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             loop.run_until_complete(_serve_daemon(path, handler_func))
-        except Exception:  # noqa: BLE001,S110 - best effort for tests
+        except Exception:  # ruff: ignore[blind-except, try-except-pass] - best effort for tests
             pass
         finally:
             if loop is not None:
@@ -91,16 +91,16 @@ def _cleanup_process(proc: mp.Process) -> None:
     if not (proc and proc.is_alive()):
         return
     proc.terminate()
-    try:  # noqa: SIM105
+    try:  # ruff: ignore[suppressible-exception]
         proc.join(timeout=5)
-    except Exception:  # noqa: BLE001,S110 - cleanup best effort
+    except Exception:  # ruff: ignore[blind-except, try-except-pass] - cleanup best effort
         pass
     if not proc.is_alive():
         return
     try:
         proc.kill()
         proc.join(timeout=1)
-    except Exception:  # noqa: BLE001,S110 - cleanup best effort
+    except Exception:  # ruff: ignore[blind-except, try-except-pass] - cleanup best effort
         pass
 
 

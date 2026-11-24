@@ -4,7 +4,7 @@ import typing as typ
 
 import msgspec as ms
 
-from .primitives import Location  # noqa: TC001
+from .primitives import Location  # ruff: ignore[typing-only-first-party-import]
 
 
 class Diagnostic(ms.Struct, frozen=True):

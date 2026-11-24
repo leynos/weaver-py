@@ -57,7 +57,7 @@ async def diagnostics_test_server(
         severity: str | None = None,
         files: list[str] | None = None,
     ) -> typ.Iterator[Diagnostic]:
-        tool = typ.cast(typ.Any, server.create_serena_tool(SerenaTool.LIST_DIAGNOSTICS))  # noqa: TC006
+        tool = typ.cast(typ.Any, server.create_serena_tool(SerenaTool.LIST_DIAGNOSTICS))  # ruff: ignore[runtime-cast-value]
         for diag in tool.list_diagnostics():
             if severity and diag.severity != severity:
                 continue
@@ -161,7 +161,7 @@ async def test_missing_diagnostics_dependency(
 
     @dispatcher.register("list-diagnostics")
     def handler() -> typ.Iterable[Diagnostic]:  # pragma: no cover - stub
-        tool = typ.cast(typ.Any, server.create_serena_tool(SerenaTool.LIST_DIAGNOSTICS))  # noqa: TC006
+        tool = typ.cast(typ.Any, server.create_serena_tool(SerenaTool.LIST_DIAGNOSTICS))  # ruff: ignore[runtime-cast-value]
         return tool.list_diagnostics()
 
     sock = tmp_path / "e.sock"

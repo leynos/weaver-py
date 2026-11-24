@@ -264,7 +264,7 @@ async def handle_get_definition(
         raise InvalidPositionError(line, char)
 
     tool = typ.cast(
-        typ.Any,  # noqa: TC006
+        typ.Any,  # ruff: ignore[runtime-cast-value]
         create_serena_tool(SerenaTool.GET_DEFINITION),
     )
     try:
@@ -288,7 +288,7 @@ async def handle_list_references(
     """Yield references for the symbol at the given position."""
 
     tool = typ.cast(
-        typ.Any,  # noqa: TC006
+        typ.Any,  # ruff: ignore[runtime-cast-value]
         create_serena_tool(SerenaTool.LIST_REFERENCES),
     )
     try:

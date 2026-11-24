@@ -4,7 +4,7 @@ import typing as typ
 
 import msgspec as ms
 
-from .diagnostics import Diagnostic  # noqa: TC001
+from .diagnostics import Diagnostic  # ruff: ignore[typing-only-first-party-import]
 
 
 class ImpactReport(ms.Struct, frozen=True):

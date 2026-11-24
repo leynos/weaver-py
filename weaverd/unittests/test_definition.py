@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import builtins
 import typing as typ
-from dataclasses import dataclass  # noqa: ICN003 -- simpler decorator usage
+from dataclasses import dataclass  # ruff: ignore[banned-import-from] -- simpler decorator usage
 
 import pytest
 
