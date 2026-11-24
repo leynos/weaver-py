@@ -13,7 +13,7 @@ SHELL := bash
 all: build check-fmt test typecheck
 
 build: uv ## Build virtual-env and install deps
-	uv venv
+	uv venv --allow-existing
 	uv sync --group dev
 
 build-release: ## Build artefacts (sdist & wheel)
