@@ -461,28 +461,32 @@ Each has a `type` discriminator for effortless streaming introspection.
 from typing import Literal, Optional
 from msgspec import Struct
 
+
 class Position(Struct):
     line: int  # 0-indexed
     character: int  # UTF-16 code units, 0-indexed
+
 
 class Range(Struct):
     start: Position
     end: Position
 
+
 class Location(Struct):
     file: str  # Absolute or workspace-relative path
     range: Range
 
+
 class Diagnostic(Struct):
-    type: Literal['diagnostic'] = 'diagnostic'
+    type: Literal["diagnostic"] = "diagnostic"
     location: Location
-    severity: Literal['Error', 'Warning', 'Info', 'Hint']
+    severity: Literal["Error", "Warning", "Info", "Hint"]
     code: Optional[str]
     message: str
 
+
 # ... and so on for Symbol, Reference, CodeEdit, ImpactReport,
 # TestResult, OnboardingReport, Error, etc.
-
 ```
 
 ```mermaid
