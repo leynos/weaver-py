@@ -207,7 +207,10 @@ def _normalize_filters(
 def _normalize_diagnostic_data(diag: Diagnostic) -> tuple[str | None, str | None]:
     """Return normalised severity and file path from ``diag``."""
 
-    diag_severity = diag.severity.lower()
+    # msgspec does not validate fields on construction, so tools may hand back a
+    # ``Diagnostic`` whose severity is missing despite the declared Literal type.
+    severity = typ.cast("str | None", diag.severity)
+    diag_severity = severity.lower() if severity else None
     diag_file = (
         os.path.normcase(os.path.normpath(diag.location.file)).lower()
         if diag.location and diag.location.file
