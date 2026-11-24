@@ -12,6 +12,7 @@ flow. Follow these rules:
 def func():
     return None
 
+
 # GOOD:
 def func():
     return
@@ -30,6 +31,7 @@ def func(x):
     if x > 0:
         return x
     # implicitly returns None (bad)
+
 
 # GOOD:
 def func(x):
@@ -51,6 +53,7 @@ def func(x):
         return x
     # no return (bad)
 
+
 # GOOD:
 def func(x):
     if x > 0:
@@ -69,6 +72,7 @@ ______________________________________________________________________
 def func():
     result = compute()
     return result
+
 
 # GOOD:
 def func():
