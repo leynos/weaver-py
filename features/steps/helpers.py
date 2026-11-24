@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import typing as typ
-from typing import TYPE_CHECKING  # noqa: ICN003
+from typing import TYPE_CHECKING  # ruff: ignore[banned-import-from]
 
 from weaverd.serena_tools import SerenaAgentNotFoundError, SerenaTool
 

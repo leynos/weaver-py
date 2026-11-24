@@ -40,7 +40,7 @@ def _create_runtime_fixture(
                 file: str, line: int, char: int
             ) -> cabc.Iterable[Symbol]:  # pragma: no cover - stub
                 tool = typ.cast(
-                    typ.Any,  # noqa: TC006
+                    typ.Any,  # ruff: ignore[runtime-cast-value]
                     server.create_serena_tool(SerenaTool.GET_DEFINITION),
                 )
                 return tool.get_definition(file=file, line=line, char=char)

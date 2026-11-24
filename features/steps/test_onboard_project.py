@@ -35,7 +35,7 @@ def runtime_dir(runtime_dir: Context) -> Context:
         def onboard() -> OnboardingReport:  # pragma: no cover - stub
             if os.environ.get("WEAVER_TEST_MISSING_SERENA"):
                 raise SerenaAgentNotFoundError()
-            tool = typ.cast(typ.Any, create_serena_tool(SerenaTool.ONBOARDING))  # noqa: TC006
+            tool = typ.cast(typ.Any, create_serena_tool(SerenaTool.ONBOARDING))  # ruff: ignore[runtime-cast-value]
             return OnboardingReport(details=tool.apply())
 
     runtime_dir["register"](setup)
