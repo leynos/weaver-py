@@ -91,7 +91,10 @@ async def _collect_symbols_from_results(
             await anext(results)
     except StopAsyncIteration:
         if len(symbols) != expected_count:
-            pytest.fail(f"Expected {expected_count} symbols, got {len(symbols)}")
+            # ty resolves pytest.fail to the wrongly typed ``_with_exception`` wrapper.
+            pytest.fail(
+                f"Expected {expected_count} symbols, got {len(symbols)}"  # ty: ignore[invalid-argument-type]
+            )
         raise
     return symbols
 

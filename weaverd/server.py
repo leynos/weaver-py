@@ -39,6 +39,7 @@ logger = logging.getLogger(__name__)
 
 
 HANDLERS: list[tuple[str, Handler]] = []
+_HandlerT = typ.TypeVar("_HandlerT", bound=Handler)
 
 
 class HandlerRegistrationError(ValueError):
@@ -86,10 +87,10 @@ class InvalidPositionError(ValueError):
         )
 
 
-def rpc_handler(name: str) -> typ.Callable[[Handler], Handler]:
+def rpc_handler(name: str) -> typ.Callable[[_HandlerT], _HandlerT]:
     """Register ``func`` as an RPC handler with ``name``."""
 
-    def decorator(func: Handler) -> Handler:
+    def decorator(func: _HandlerT) -> _HandlerT:
         if any(existing == name for existing, _ in HANDLERS):
             raise HandlerRegistrationError(name)
         HANDLERS.append((name, func))
@@ -206,7 +207,7 @@ def _normalize_filters(
 def _normalize_diagnostic_data(diag: Diagnostic) -> tuple[str | None, str | None]:
     """Return normalised severity and file path from ``diag``."""
 
-    diag_severity = diag.severity.lower() if diag.severity else None
+    diag_severity = diag.severity.lower()
     diag_file = (
         os.path.normcase(os.path.normpath(diag.location.file)).lower()
         if diag.location and diag.location.file
