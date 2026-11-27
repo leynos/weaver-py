@@ -1,0 +1,29 @@
+[package]
+name = "weaverd"
+version = "0.1.0"
+edition = "2021"
+description = "Weaver daemon providing long-lived workspace services"
+license = "ISC"
+
+[features]
+default = ["toml"]
+json5 = ["ortho_config/json5", "ortho_config_macros/json5"]
+toml = ["ortho_config/toml", "ortho_config_macros/toml"]
+yaml = ["ortho_config/yaml", "ortho_config_macros/yaml"]
+
+[dependencies]
+clap = { workspace = true }
+ortho_config = { workspace = true }
+ortho_config_macros = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+weaver-runtime = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+nix = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+rstest = { workspace = true }
+tempfile = { workspace = true }
+serial_test = { workspace = true }

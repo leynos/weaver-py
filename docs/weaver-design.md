@@ -380,6 +380,29 @@ handler fails, so malformed input does not crash the daemon.
 Upstream releases will be monitored and an upgrade will be performed once a
 patched version is available.
 
+- The Rust workspace now houses dedicated `weaver-cli` and `weaverd` crates.
+  The CLI layers `ortho-config` derived option structs over a `SystemSpawner`
+  abstraction, preparing PID files and Unix-domain sockets before launching the
+  daemon and pruning them on shutdown. The spawner now calls `setsid` prior to
+  exec so the daemon detaches from the invoking terminal cleanly, and readiness
+  polling uses an exponential backoff helper to avoid busy loops while waiting
+  for start-up or shutdown events.
+- A shared `weaver-runtime` crate centralises runtime directory resolution and
+  the default socket/PID naming so the CLI and daemon derive their filesystem
+  locations from a single source of truth.
+- `weaverd` runs on a single-threaded Tokio runtime, coordinating graceful
+  termination through `Notify`. Status replies are serialised with
+  `serde_json`, while PID and socket artefacts are protected by scoped RAII
+  guards so unexpected exits do not strand on-disk state.
+- Behavioural coverage comes from `rstest-bdd` scenarios that execute the
+  compiled binaries, asserting happy and failure paths for the lifecycle
+  commands. Helper utilities now rely on `serde_json` builders instead of
+  manual string escaping to avoid injection bugs when formatting error payloads.
+- A repository-level `rust-toolchain.toml` pins the nightly channel because the
+  `rstest-bdd` alpha release currently requires the `auto_traits` and
+  `negative_impls` features. This keeps `cargo fmt`, `clippy`, and tests on a
+  consistent toolchain.
+
 ## IV. Advanced Workflows
 
 The following examples demonstrate how the composable command set enables
